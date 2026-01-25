@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Decision-Light Daily System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      min-height: calc(100vh - 40px);
+    }
+
+    .welcome-banner {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+      color: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      margin-bottom: 24px;
+    }
+
+    .welcome-banner h2 {
+      font-size: 28px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .today-tasks {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .today-tasks h3 {
+      font-size: 16px;
+      color: #cbd5e0;
+      margin-bottom: 12px;
+    }
+
+    .task-preview {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .task-preview::before {
+      content: '📌';
+      font-size: 16px;
+    }
+
+    .no-tasks {
+      color: #a0aec0;
+      font-style: italic;
+      font-size: 14px;
+    }
+
+    .calendar-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+      max-height: calc(100vh - 160px);
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .calendar-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a202c;
+    }
+
+    .month-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .month-nav button {
+      background: #667eea;
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .month-nav button:hover {
+      background: #5568d3;
+      transform: scale(1.05);
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .weekday {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      padding: 8px 0;
+    }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      position: relative;
+      transition: all 0.2s;
+      background: #f7fafc;
+    }
+
+    .day:not(.empty):hover {
+      background: #e2e8f0;
+      transform: scale(1.05);
+    }
+
+    .day.empty {
+      cursor: default;
+      background: transparent;
+    }
+
+    .day.today {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+    }
+
+    .day.selected {
+      background: #667eea;
+      color: white;
+      font-weight: 700;
+    }
+
+    .day.has-data::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .day.has-reminder::before {
+      content: '📌';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      font-size: 10px;
+    }
+
+    .day.selected.has-data::after {
+      background: #fbbf24;
+    }
+
+    .year-selector {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+    }
+
+    .year-selector label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #718096;
+      margin-bottom: 8px;
+    }
+
+    .year-selector select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .main-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+      max-height: calc(100vh - 160px);
+    }
+
+    .header {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 3px solid #e2e8f0;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #1a202c;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      color: #718096;
+      font-style: italic;
+    }
+
+    .section {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: all 0.2s;
+    }
+
+    .section:hover {
+      border-color: #cbd5e0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .section h3 {
+      font-size: 16px;
+      color: #2d3748;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-number {
+      background: #667eea;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .reminder-input-group {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .reminder-input-group input {
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .add-reminder-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .add-reminder-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .reminders-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .reminder-item {
+      background: #f7fafc;
+      padding: 14px 16px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid #667eea;
+      transition: all 0.2s;
+    }
+
+    .reminder-item:hover {
+      background: #edf2f7;
+    }
+
+    .reminder-item.completed {
+      opacity: 0.6;
+      border-left-color: #22c55e;
+    }
+
+    .reminder-item.completed .reminder-text {
+      text-decoration: line-through;
+    }
+
+    .reminder-text {
+      flex: 1;
+      font-size: 14px;
+      color: #2d3748;
+    }
+
+    .reminder-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .reminder-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .delete-reminder-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .delete-reminder-btn:hover {
+      background: #dc2626;
+    }
+
+    .no-reminders {
+      text-align: center;
+      color: #a0aec0;
+      font-style: italic;
+      padding: 20px;
+      font-size: 14px;
+    }
+
+    .mode-options {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mode-option {
+      position: relative;
+    }
+
+    .mode-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .mode-option label {
+      display: block;
+      padding: 16px 20px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .mode-option input[type="radio"]:checked + label {
+      border-color: #667eea;
+      background: #eef2ff;
+      font-weight: 600;
+    }
+
+    .mode-option label:hover {
+      border-color: #cbd5e0;
+    }
+
+    .mode-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .mode-desc {
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7fafc;
+      transition: all 0.2s;
+    }
+
+    .checklist-item:hover {
+      background: #edf2f7;
+    }
+
+    .checklist-item input[type="checkbox"] {
+      margin-top: 2px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .checklist-item label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .checklist-item input[type="checkbox"]:checked + label {
+      text-decoration: line-through;
+      color: #a0aec0;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .input-group {
+      margin-top: 12px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 8px;
+    }
+
+    .ai-prompts {
+      display: grid;
+      gap: 12px;
+    }
+
+    .prompt-card {
+      background: #f7fafc;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .prompt-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+
+    .prompt-text {
+      font-size: 13px;
+      color: #4a5568;
+      font-family: 'Courier New', monospace;
+      background: white;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .identity {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 24px;
+    }
+
+    .footer {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+      text-align: center;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      
+      .calendar-section, .main-content {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="welcome-banner">
+      <h2 id="welcomeMessage">Rise and Shine, Mr. Aryan! ☀️</h2>
+      <div class="today-tasks" id="todayTasksPreview">
+        <h3>Today's Reminders:</h3>
+        <div id="taskPreviewList"></div>
+      </div>
+    </div>
+
+    <div class="calendar-section">
+      <div class="calendar-header">
+        <h2 id="monthYear"></h2>
+        <div class="month-nav">
+          <button id="prevMonth">‹</button>
+          <button id="nextMonth">›</button>
+        </div>
+      </div>
+
+      <div class="weekdays">
+        <div class="weekday">Su</div>
+        <div class="weekday">Mo</div>
+        <div class="weekday">Tu</div>
+        <div class="weekday">We</div>
+        <div class="weekday">Th</div>
+        <div class="weekday">Fr</div>
+        <div class="weekday">Sa</div>
+      </div>
+
+      <div class="days-grid" id="daysGrid"></div>
+
+      <div class="year-selector">
+        <label>Jump to Year</label>
+        <select id="yearSelect"></select>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="header">
+        <h1 id="selectedDate">Select a date to begin</h1>
+        <p class="subtitle">Rule: You do not decide what to do during the day. You only decide when to start.</p>
+      </div>
+
+      <div class="section">
+        <h3><span class="section-number">📌</span> Reminders & Tasks for This Day</h3>
+        <div class="reminder-input-group">
+          <input type="text" id="reminderInput" placeholder="Add a reminder or task for this day...">
+          <button class="add-reminder-btn" id="addReminderBtn">Add</button>
+        </div>
+        <div class="reminders-list" id="remindersList">
+          <div class="no-reminders">No reminders for this day yet</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3><span class="section-number">1</span> Morning (2 minutes)</h3>
+        <p style="margin-bottom: 16px; color: #718096; font-size: 14px;">Today's Mode (select ONE - no switching unless physically necessary):</p>
+        
+        <div class="mode-options">
+          <div class="mode-option">
+            <input type="radio" name="mode" value="build" id="modeBuild">
+            <label for="modeBuild">
+              <div class="mode-title">🔥 Build Mode</div>
+              <div class="mode-desc">High energy - Deep work, communication, movement</div>
+            </label>
+          </div>
+
+          <div class="mode-option">
+            <input type="radio" name="mode" value="minimum" id="modeMinimum">
+            <label for="modeMinimum">
+              <div class="mode-title">⚙️ Minimum Mode</div>
+              <div class="mode-desc">Low energy - Core work only, 20 min max</div>
+            </label>
+          </div>
+
+          <div class="mode-option">
+            <input type="radio" name="mode" value="recovery" id="modeRecovery">
+            <label for="modeRecovery">
+              <div class="mode-title">🌿 Recovery Mode</div>
+              <div class="mode-desc">Burnout/sick - Rest is progress, no guilt</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" id="buildActions" style="display:none;">
+        <h3><span class="section-number">2</span> Build Mode Actions</h3>
+        <div class="checklist">
+          <div class="checklist-item">
+            <input type="checkbox" id="build1">
+            <label for="build1"><strong>Deep Work (60–90 min):</strong> Coding / core project</label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="build2">
+            <label for="build2"><strong>Communication Drill (10 min):</strong> Speak, record, or mirror</label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="build3">
+            <label for="build3"><strong>Body:</strong> Gym / walk / stretch</label>
+          </div>
+        </div>
+        <p style="margin-top: 12px; color: #718096; font-size: 13px; font-style: italic;">Stop after completion. Extra work is optional, never required.</p>
+      </div>
+
+      <div class="section" id="minimumActions" style="display:none;">
+        <h3><span class="section-number">2</span> Minimum Mode Actions</h3>
+        <div class="checklist">
+          <div class="checklist-item">
+            <input type="checkbox" id="min1">
+            <label for="min1"><strong>Core Work (20 min):</strong> Coding or revision only</label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="min2">
+            <label for="min2"><strong>Communication (5 min):</strong> Speak one topic aloud</label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="min3">
+            <label for="min3"><strong>Movement:</strong> Short walk</label>
+          </div>
+        </div>
+        <p style="margin-top: 12px; color: #22c55e; font-size: 13px; font-weight: 600;">If all three are done → Day is a WIN.</p>
+      </div>
+
+      <div class="section" id="recoveryActions" style="display:none;">
+        <h3><span class="section-number">2</span> Recovery Mode Actions</h3>
+        <div class="checklist">
+          <div class="checklist-item">
+            <input type="checkbox" id="rec1">
+            <label for="rec1"><strong>Light review / organizing only</strong></label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="rec2">
+            <label for="rec2"><strong>No self-improvement content</strong></label>
+          </div>
+          <div class="checklist-item">
+            <input type="checkbox" id="rec3">
+            <label for="rec3"><strong>Sleep, food, hydration first</strong></label>
+          </div>
+        </div>
+        <p style="margin-top: 12px; color: #22c55e; font-size: 13px; font-weight: 600;">Recovery is progress. No guilt allowed.</p>
+      </div>
+
+      <div class="section">
+        <h3><span class="section-number">3</span> One Focus Rule</h3>
+        <p style="margin-bottom: 12px; color: #718096; font-size: 14px;">If distracted, ask: "What is the next physical action?"</p>
+        <input type="text" id="nextAction" placeholder="Write the next physical action here...">
+      </div>
+
+      <div class="section">
+        <h3><span class="section-number">4</span> End of Day (3 minutes) - Close the Loops</h3>
+        
+        <div class="input-group">
+          <label class="input-label">One thing I completed:</label>
+          <input type="text" id="completed" placeholder="What did you finish today?">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">One thing I learned:</label>
+          <input type="text" id="learned" placeholder="What new insight did you gain?">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">One thing to ignore tomorrow:</label>
+          <input type="text" id="ignore" placeholder="What can you let go of?">
+        </div>
+      </div>
+
+      <div class="section">
+        <h3><span class="section-number">5</span> AI Prompts (Copy–Paste)</h3>
+        <div class="ai-prompts">
+          <div class="prompt-card">
+            <div class="prompt-title">Executor Mode</div>
+            <div class="prompt-text">Act as an executor, not a planner. Goal: ___ Time available: ___ minutes Output format: checklist Start immediately.</div>
+          </div>
+
+          <div class="prompt-card">
+            <div class="prompt-title">Decision Freeze</div>
+            <div class="prompt-text">I'm freezing between A and B. Choose for me based on long-term leverage. No explanation longer than 5 lines. Then give me the next physical action.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="identity">
+        I build systems, not moods. Consistency beats intensity.<br>
+        This page is enough. Do not add more.
+      </div>
+
+      <div class="footer">
+        ✓ Auto-saved • Data stored locally in your browser
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentYear = 2026;
+    let currentMonth = 0;
+    let selectedDateKey = null;
+
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"];
+
+    // Get all reminders
+    function getAllReminders() {
+      const reminders = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('reminders_')) {
+          try {
+            const dateKey = key.replace('reminders_', '');
+            reminders[dateKey] = JSON.parse(localStorage.getItem(key));
+          } catch (e) {
+            console.error('Error parsing reminders:', e);
+          }
+        }
+      }
+      return reminders;
+    }
+
+    // Update welcome banner
+    function updateWelcomeBanner() {
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const hours = today.getHours();
+      let greeting = 'Rise and Shine';
+      if (hours >= 12 && hours < 17) greeting = 'Good Afternoon';
+      else if (hours >= 17) greeting = 'Good Evening';
+      
+      document.getElementById('welcomeMessage').textContent = `${greeting}, Mr. Aryan! ☀️`;
+      
+      const reminders = JSON.parse(localStorage.getItem(`reminders_${todayKey}`)) || [];
+      const taskPreviewList = document.getElementById('taskPreviewList');
+      
+      const activeReminders = reminders.filter(r => !r.completed);
+      
+      if (activeReminders.length === 0) {
+        if (reminders.length > 0) {
+          taskPreviewList.innerHTML = '<div class="no-tasks">All tasks completed! 🎉</div>';
+        } else {
+          taskPreviewList.innerHTML = '<div class="no-tasks">No reminders for today. Enjoy your day!</div>';
+        }
+      } else {
+        taskPreviewList.innerHTML = activeReminders
+          .slice(0, 3)
+          .map(r => `<div class="task-preview">${r.text}</div>`)
+          .join('');
+      }
+    }
+
+    // Initialize year selector
+    function initYearSelector() {
+      const select = document.getElementById('yearSelect');
+      for (let y = 2024; y <= 2030; y++) {
+        const option = document.createElement('option');
+        option.value = y;
+        option.textContent = y;
+        if (y === currentYear) option.selected = true;
+        select.appendChild(option);
+      }
+      select.addEventListener('change', (e) => {
+        currentYear = parseInt(e.target.value);
+        renderCalendar();
+      });
+    }
+
+    // Render calendar
+    function renderCalendar() {
+      const grid = document.getElementById('daysGrid');
+      const monthYearEl = document.getElementById('monthYear');
+      
+      monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+      grid.innerHTML = '';
+
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === currentYear && today.getMonth() === currentMonth;
+      const todayDate = today.getDate();
+
+      const allReminders = getAllReminders();
+
+      for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day empty';
+        grid.appendChild(empty);
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dayEl = document.createElement('div');
+        dayEl.className = 'day';
+        dayEl.textContent = d;
+
+        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        const storedData = localStorage.getItem(dateKey);
+        if (storedData) {
+          dayEl.classList.add('has-data');
+        }
+
+        if (allReminders[dateKey] && allReminders[dateKey].length > 0) {
+          dayEl.classList.add('has-reminder');
+        }
+
+        if (isCurrentMonth && d === todayDate) {
+          dayEl.classList.add('today');
+        }
+
+        dayEl.addEventListener('click', () => selectDate(dateKey, dayEl));
+        
+        grid.appendChild(dayEl);
+      }
+    }
+
+    // Select a date
+    function selectDate(dateKey, dayEl) {
+      selectedDateKey = dateKey;
+      
+      document.querySelectorAll('.day').forEach(d => d.classList.remove('selected'));
+      dayEl.classList.add('selected');
+
+      const date = new Date(dateKey);
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('selectedDate').textContent = date.toLocaleDateString('en-US', options);
+
+      loadDayData(dateKey);
+      renderReminders();
+    }
+
+    // Load day data
+    function loadDayData(dateKey) {
+      const data = localStorage.getItem(dateKey);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          
+          if (parsed.mode) {
+            document.getElementById(`mode${parsed.mode.charAt(0).toUpperCase() + parsed.mode.slice(1)}`).checked = true;
+            updateModeDisplay(parsed.mode);
+          }
+          
+          ['build1', 'build2', 'build3', 'min1', 'min2', 'min3', 'rec1', 'rec2', 'rec3'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = parsed[id] || false;
+          });
+          
+          document.getElementById('nextAction').value = parsed.nextAction || '';
+          document.getElementById('completed').value = parsed.completed || '';
+          document.getElementById('learned').value = parsed.learned || '';
+          document.getElementById('ignore').value = parsed.ignore || '';
+        } catch (e) {
+          console.error('Error loading day data:', e);
+        }
+      } else {
+        resetForm();
+      }
+    }
+
+    // Reset form
+    function resetForm() {
+      document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+      document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+      document.querySelectorAll('input[type="text"]').forEach(t => t.value = '');
+      updateModeDisplay(null);
+    }
+
+    // Save day data
+    function saveDayData() {
+      if (!selectedDateKey) return;
+
+      const data = {
+        mode: document.querySelector('input[name="mode"]:checked')?.value || null,
+        build1: document.getElementById('build1')?.checked || false,
+        build2: document.getElementById('build2')?.checked || false,
+        build3: document.getElementById('build3')?.checked || false,
+        min1: document.getElementById('min1')?.checked || false,
+        min2: document.getElementById('min2')?.checked || false,
+        min3: document.getElementById('min3')?.checked || false,
+        rec1: document.getElementById('rec1')?.checked || false,
+        rec2: document.getElementById('rec2')?.checked || false,
+        rec3: document.getElementById('rec3')?.checked || false,
+        nextAction: document.getElementById('nextAction').value,
+        completed: document.getElementById('completed').value,
+        learned: document.getElementById('learned').value,
+        ignore: document.getElementById('ignore').value
+      };
+
+      localStorage.setItem(selectedDateKey, JSON.stringify(data));
+      renderCalendar();
+    }
+
+    // Update mode display
+    function updateModeDisplay(mode) {
+      document.getElementById('buildActions').style.display = mode === 'build' ? 'block' : 'none';
+      document.getElementById('minimumActions').style.display = mode === 'minimum' ? 'block' : 'none';
+      document.getElementById('recoveryActions').style.display = mode === 'recovery' ? 'block' : 'none';
+    }
+
+    // Render reminders
+    function renderReminders() {
+      if (!selectedDateKey) return;
+
+      const reminders = JSON.parse(localStorage.getItem(`reminders_${selectedDateKey}`)) || [];
+      const list = document.getElementById('remindersList');
+
+      if (reminders.length === 0) {
+        list.innerHTML = '<div class="no-reminders">No reminders for this day yet</div>';
+        return;
+      }
+
+      list.innerHTML = reminders.map((reminder, index) => `
+        <div class="reminder-item ${reminder.completed ? 'completed' : ''}">
+          <span class="reminder-text">${reminder.text}</span>
+          <div class="reminder-actions">
+            <input type="checkbox" class="reminder-checkbox" ${reminder.completed ? 'checked' : ''} 
+                   onchange="toggleReminder(${index})">
+            <button class="delete-reminder-btn" onclick="deleteReminder(${index})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Add reminder
+    function addReminder() {
+      if (!selectedDateKey) {
+        alert('Please select a date first');
+        return;
+      }
+
+      const input = document.getElementById('reminderInput');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      const reminders = JSON.parse(localStorage.getItem(`reminders_${selectedDateKey}`)) || [];
+      reminders.push({ text, completed: false });
+      localStorage.setItem(`reminders_${selectedDateKey}`, JSON.stringify(reminders));
+
+      input.value = '';
+      renderReminders();
+      renderCalendar();
+      updateWelcomeBanner();
+    }
+
+    // Toggle reminder
+    window.toggleReminder = function(index) {
+      if (!selectedDateKey) return;
+
+      const reminders = JSON.parse(localStorage.getItem(`reminders_${selectedDateKey}`)) || [];
+      if (reminders[index]) {
+        reminders[index].completed = !reminders[index].completed;
+        localStorage.setItem(`reminders_${selectedDateKey}`, JSON.stringify(reminders));
+        renderReminders();
+        updateWelcomeBanner();
+      }
+    }
+
+    // Delete reminder
+    window.deleteReminder = function(index) {
+      if (!selectedDateKey) return;
+
+      const reminders = JSON.parse(localStorage.getItem(`reminders_${selectedDateKey}`)) || [];
+      reminders.splice(index, 1);
+      
+      if (reminders.length === 0) {
+        localStorage.removeItem(`reminders_${selectedDateKey}`);
+      } else {
+        localStorage.setItem(`reminders_${selectedDateKey}`, JSON.stringify(reminders));
+      }
+      
+      renderReminders();
+      renderCalendar();
+      updateWelcomeBanner();
+    }
+
+    // Event listeners
+    document.getElementById('prevMonth').addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar();
+    });
+
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar();
+    });
+
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        updateModeDisplay(e.target.value);
+        saveDayData();
+      });
+    });
+
+    document.querySelectorAll('input[type="checkbox"], input[type="text"]').forEach(el => {
+      el.addEventListener('change', saveDayData);
+      el.addEventListener('input', saveDayData);
+    });
+
+    document.getElementById('addReminderBtn').addEventListener('click', addReminder);
+    document.getElementById('reminderInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addReminder();
+    });
+
+    // Initialize
+    const today = new Date();
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth();
+
+    initYearSelector();
+    renderCalendar();
+    updateWelcomeBanner();
+
+    // Auto-select today
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayEl = Array.from(document.querySelectorAll('.day')).find(el => 
+      el.textContent == today.getDate() && el.classList.contains('today')
+    );
+    if (todayEl) {
+      setTimeout(() => todayEl.click(), 100);
+    }
+  </script>
+</body>
+</html>
